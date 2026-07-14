@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rising Waters | Evaluate Flood Risk</title>
+    <meta name="description" content="Enter river telemetry metrics to predict flood risks using XGBoost machine learning">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #070b13;
+            --bg-card: rgba(13, 20, 35, 0.65);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --color-primary: #3b82f6; /* Blue */
+            --color-primary-glow: rgba(59, 130, 246, 0.25);
+            --color-secondary: #06b6d4; /* Cyan */
+            --color-secondary-glow: rgba(6, 182, 212, 0.25);
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-sans); }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .glow-orb {
+            position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0;
+        }
+        .glow-orb.blue {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, var(--color-primary-glow) 0%, transparent 70%);
+            top: -100px; left: -100px;
+        }
+        .glow-orb.cyan {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, var(--color-secondary-glow) 0%, transparent 70%);
+            bottom: -80px; right: -80px;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(8, 12, 22, 0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 1rem 2.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 100;
+        }
+        .navbar .brand {
+            display: flex; align-items: center; gap: 0.75rem; text-decoration: none;
+        }
+        .navbar .brand-icon {
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .navbar .brand-text {
+            font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; color: var(--text-primary);
+        }
+        .navbar .brand-text span {
+            background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a {
+            color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: 0.95rem;
+            transition: var(--transition-smooth);
+        }
+        .nav-links a:hover { color: var(--text-primary); }
+        .nav-links a.active {
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--color-primary);
+            padding-bottom: 2px;
+        }
+
+        /* Page Content */
+        .page-wrapper {
+            position: relative; z-index: 1;
+            max-width: 800px;
+            margin: 7rem auto 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        .page-header h1 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .page-header h1 i { color: var(--color-secondary); margin-right: 0.5rem; }
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Glass Form Card */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+        }
+
+        .form-section-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--color-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-section-title::after {
+            content: '';
+            flex-grow: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-group select,
+        .form-group input[type="number"] {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            transition: var(--transition-smooth);
+            width: 100%;
+        }
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--color-primary);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-group select option {
+            background: #111827;
+            color: var(--text-primary);
+        }
+
+        .field-hint {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        /* Submit Button */
+        .btn-submit {
+            width: 100%;
+            padding: 1rem 2rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+            color: var(--text-primary);
+            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.25);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-submit:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(6, 182, 212, 0.45);
+        }
+
+        .footer {
+            position: relative; z-index: 1;
+            text-align: center; padding: 2rem;
+            color: var(--text-muted); font-size: 0.8rem;
+            border-top: 1px solid var(--border-glass);
+            margin-top: 5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="glow-orb blue"></div>
+    <div class="glow-orb cyan"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="/" class="brand">
+            <i class="fa-solid fa-water brand-icon"></i>
+            <span class="brand-text">Rising<span>Waters</span></span>
+        </a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/predict" class="active">Predict</a>
+        </div>
+    </nav>
+
+    <!-- Form Page -->
+    <div class="page-wrapper">
+        <div class="page-header">
+            <h1><i class="fa-solid fa-droplet"></i> Evaluate Regional Flood Risk</h1>
+            <p>Input current sensor metrics below to run the XGBoost prediction model.</p>
+        </div>
+
+        <div class="glass-card">
+            <form action="/predict/submit" method="post" id="predict-form">
+
+                <!-- Station Location Section -->
+                <div class="form-section-title"><i class="fa-solid fa-map-pin"></i> River Station</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="location">Station Location</label>
+                        <select id="location" name="location" required>
+                            <option value="Kurnool">Kurnool (Threshold: 8.0m)</option>
+                            <option value="Vijayawada">Vijayawada (Threshold: 6.5m)</option>
+                            <option value="Guntur">Guntur (Threshold: 5.0m)</option>
+                            <option value="Nellore">Nellore (Threshold: 7.0m)</option>
+                            <option value="Tirupati">Tirupati (Threshold: 5.5m)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="water_level">Water Level (meters)</label>
+                        <input type="number" id="water_level" name="water_level" step="0.01" min="0" max="25" placeholder="Current water level..." required>
+                    </div>
+                </div>
+
+                <!-- Climate Metrics Section -->
+                <div class="form-section-title"><i class="fa-solid fa-cloud-sun-rain"></i> Climate & Weather</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="rainfall">Rainfall Volume (mm)</label>
+                        <input type="number" id="rainfall" name="rainfall" step="0.1" min="0" max="400" placeholder="Accumulated rainfall..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="temperature">Temperature (°C)</label>
+                        <input type="number" id="temperature" name="temperature" step="0.1" min="-10" max="60" placeholder="Local temperature..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="humidity">Humidity Percentage (%)</label>
+                        <input type="number" id="humidity" name="humidity" step="1" min="0" max="100" placeholder="Relative humidity..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="wind_speed">Wind Speed (km/h)</label>
+                        <input type="number" id="wind_speed" name="wind_speed" step="0.1" min="0" max="150" placeholder="Current wind speed..." required>
+                    </div>
+                </div>
+
+                <!-- Flow Dynamics Section -->
+                <div class="form-section-title"><i class="fa-solid fa-arrow-down-up-lock"></i> Flow Dynamics</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="river_flow">River Flow Rate (m³/s)</label>
+                        <input type="number" id="river_flow" name="river_flow" step="0.1" min="0" max="3000" placeholder="Volume flow rate..." required>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn-submit" id="btn-submit-prediction">
+                    <i class="fa-solid fa-circle-play"></i> Evaluate Flood Risk Level
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <footer class="footer">
+        &copy; 2026 Rising Waters &mdash; Flood Alert & Warning System. All rights reserved.
+    </footer>
+</body>
+</html>

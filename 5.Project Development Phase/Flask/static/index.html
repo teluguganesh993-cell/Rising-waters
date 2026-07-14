@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rising Waters | Flood Alert Monitoring Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-mode">
+    <div class="glass-bg-glow"></div>
+    <div class="glass-bg-glow secondary"></div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-water brand-logo"></i>
+                <h2>Rising<span>Waters</span></h2>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-target="overview"><i class="fa-solid fa-chart-line"></i> Overview & Analytics</a>
+                <a href="#" class="nav-item" data-target="locations"><i class="fa-solid fa-location-dot"></i> Monitoring Stations</a>
+                <a href="#" class="nav-item" data-target="readings"><i class="fa-solid fa-droplet"></i> Sensor Readings</a>
+                <a href="#" class="nav-item" data-target="prediction-center"><i class="fa-solid fa-triangle-exclamation"></i> Predict & Alert</a>
+                <a href="#" class="nav-item" data-target="database"><i class="fa-solid fa-database"></i> System DB View</a>
+            </nav>
+            
+            <div class="model-status-card">
+                <div class="status-indicator">
+                    <span class="pulse-dot green" id="model-dot"></span>
+                    <span id="model-status-text">XGBoost Active</span>
+                </div>
+                <p>Model ID: <span id="active-model-id">1</span></p>
+                <div class="accuracy-metrics">
+                    <div>
+                        <span class="metric-label">Train Acc</span>
+                        <span class="metric-val" id="model-train-acc">--%</span>
+                    </div>
+                    <div>
+                        <span class="metric-label">Test Acc</span>
+                        <span class="metric-val" id="model-test-acc">--%</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-title">
+                    <h1>River Water Levels & Flood Warning Dashboard</h1>
+                    <p>Machine Learning Early Warning Early Alert System</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-icon" id="btn-refresh-data" title="Sync Station Data">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                    <div class="user-badge">
+                        <div class="user-avatar"><i class="fa-solid fa-user-shield"></i></div>
+                        <div class="user-info">
+                            <span class="user-name">Safety Operator</span>
+                            <span class="user-role">Disaster Management</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Cards Summary Row -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="card-icon red"><i class="fa-solid fa-bell-slash"></i></div>
+                    <div class="card-data">
+                        <h3>Active Warnings</h3>
+                        <p class="count" id="stat-active-alerts">0</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="card-icon blue"><i class="fa-solid fa-network-wired"></i></div>
+                    <div class="card-data">
+                        <h3>Total Readings</h3>
+                        <p class="count" id="stat-total-readings">0</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="card-icon green"><i class="fa-solid fa-gauge-simple-high"></i></div>
+                    <div class="card-data">
+                        <h3>Avg Water Level</h3>
+                        <p class="count" id="stat-avg-water">0.0 m</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="card-icon yellow"><i class="fa-solid fa-cloud-showers-heavy"></i></div>
+                    <div class="card-data">
+                        <h3>Max Rainfall</h3>
+                        <p class="count" id="stat-max-rain">0.0 mm</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panels Section -->
+            <div class="panels-container">
+                <!-- Overview Panel -->
+                <div class="panel active" id="panel-overview">
+                    <div class="grid-2-col">
+                        <!-- Chart Card -->
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-chart-pie"></i> Risk Evaluation Distribution</h3>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-decisions"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Mini Tables Card -->
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Flood Evaluations</h3>
+                            </div>
+                            <div class="table-container list-view">
+                                <table id="table-recent-predictions">
+                                    <thead>
+                                        <tr>
+                                            <th>Prediction ID</th>
+                                            <th>Reading ID</th>
+                                            <th>Risk Level</th>
+                                            <th>Probability</th>
+                                            <th>Alert</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="5" class="text-center">No evaluations run yet.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Locations Panel -->
+                <div class="panel" id="panel-locations">
+                    <div class="grid-2-col">
+                        <!-- Create Location -->
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-map-location-dot"></i> Register New Station Location</h3>
+                            </div>
+                            <form id="form-create-location" class="dashboard-form">
+                                <div class="form-group">
+                                    <label for="loc-name">Station / Location Name</label>
+                                    <input type="text" id="loc-name" name="location_name" required placeholder="e.g. Vijayawada">
+                                </div>
+                                <div class="form-group">
+                                    <label for="loc-thresh">Warning Level Water Threshold (meters)</label>
+                                    <input type="number" id="loc-thresh" name="base_water_threshold" step="0.1" required placeholder="e.g. 6.5">
+                                    <span class="field-hint">Safety baseline. Water levels exceeding this will spike flood probabilities.</span>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="loc-lat">Latitude</label>
+                                        <input type="number" id="loc-lat" name="latitude" step="0.0001" required placeholder="e.g. 16.5062">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="loc-lon">Longitude</label>
+                                        <input type="number" id="loc-lon" name="longitude" step="0.0001" required placeholder="e.g. 80.6480">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Add Station Profile</button>
+                            </form>
+                        </div>
+
+                        <!-- System Users Management Panel (sidebar/card) -->
+                        <div class="flex-column-gap">
+                            <div class="glass-card">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-users-gear"></i> Register Station Personnel</h3>
+                                </div>
+                                <form id="form-create-user" class="dashboard-form">
+                                    <div class="form-group">
+                                        <label for="user-name">Full Name</label>
+                                        <input type="text" id="user-name" name="name" required placeholder="e.g. Telugu Ganesh">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="user-email">Email Address</label>
+                                        <input type="email" id="user-email" name="email" required placeholder="e.g. ganesh@disaster.in">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="user-role">Observer Role</label>
+                                        <select id="user-role" name="role" required>
+                                            <option value="Operator">Disaster Manager / Operator</option>
+                                            <option value="Observer">Observer / Public Officer</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary">Register User</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Readings Panel -->
+                <div class="panel" id="panel-readings">
+                    <div class="glass-card max-width-800 center-block">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-wind"></i> Log IoT Node Sensor Reading</h3>
+                        </div>
+                        <form id="form-create-reading" class="dashboard-form">
+                            <div class="form-group">
+                                <label for="read-location-id">Select Monitoring Station</label>
+                                <select id="read-location-id" name="location_id" required>
+                                    <option value="">-- Select River Station --</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="read-water">Water Level (meters)</label>
+                                    <input type="number" id="read-water" name="water_level" step="0.01" required placeholder="e.g. 5.34">
+                                </div>
+                                <div class="form-group">
+                                    <label for="read-rain">Current Rainfall (mm)</label>
+                                    <input type="number" id="read-rain" name="rainfall" step="0.1" required placeholder="e.g. 42.5">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="read-temp">Temperature (°C)</label>
+                                    <input type="number" id="read-temp" name="temperature" step="0.1" required placeholder="e.g. 28.6">
+                                </div>
+                                <div class="form-group">
+                                    <label for="read-hum">Humidity (%)</label>
+                                    <input type="number" id="read-hum" name="humidity" min="0" max="100" required placeholder="e.g. 78">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="read-flow">River Flow Rate (m³/s)</label>
+                                    <input type="number" id="read-flow" name="river_flow" step="0.1" required placeholder="e.g. 145.2">
+                                </div>
+                                <div class="form-group">
+                                    <label for="read-wind">Wind Speed (km/h)</label>
+                                    <input type="number" id="read-wind" name="wind_speed" step="0.1" required placeholder="e.g. 12.8">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Submit Telemetry Data</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Prediction Center Panel -->
+                <div class="panel" id="panel-prediction-center">
+                    <div class="grid-2-col">
+                        <!-- Prediction Controls -->
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-gears"></i> Request ML Alert Evaluation</h3>
+                            </div>
+                            <form id="form-run-prediction" class="dashboard-form">
+                                <div class="form-group">
+                                    <label for="pred-reading-id">Select Pending Sensor Reading</label>
+                                    <select id="pred-reading-id" name="reading_id" required>
+                                        <option value="">-- Choose Reading Entry --</option>
+                                    </select>
+                                    <span class="field-hint">Displays Reading ID with Station & Timestamp</span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="pred-model-id">Select ML Model Engine</label>
+                                    <select id="pred-model-id" name="model_id" required>
+                                        <option value="">-- Select Model --</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-large btn-glowing"><i class="fa-solid fa-circle-play"></i> Evaluate Risk Levels</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Prediction Result Card -->
+                        <div class="glass-card pred-result-card" id="prediction-result-display">
+                            <div class="result-placeholder">
+                                <i class="fa-solid fa-brain placeholder-brain"></i>
+                                <h4>Waiting for Evaluation</h4>
+                                <p>Select a telemetry log entry and ML model to feed metrics into the prediction pipeline.</p>
+                            </div>
+                            <div class="result-content hidden" id="prediction-result-content">
+                                <div class="result-status-header" id="result-status-box">
+                                    <i class="fa-solid" id="result-status-icon"></i>
+                                    <h2 id="result-status-title">Approved</h2>
+                                </div>
+                                <div class="probability-score-radial">
+                                    <div class="radial-ring">
+                                        <span id="result-probability-percent">0%</span>
+                                        <span class="label">Flood Risk Prob</span>
+                                    </div>
+                                </div>
+                                <div class="result-metrics-details">
+                                    <div class="detail-row">
+                                        <span>Alert status</span>
+                                        <strong id="result-alert-level">--</strong>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span>Recommendation</span>
+                                        <strong id="result-recommendation">--</strong>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span>Evaluation Time</span>
+                                        <strong id="result-prediction-time">--</strong>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span>Predictive Model</span>
+                                        <strong id="result-model-name">--</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database View Panel -->
+                <div class="panel" id="panel-database">
+                    <!-- Tabs for different DB tables -->
+                    <div class="db-tabs">
+                        <button class="db-tab-btn active" data-table="users">Users</button>
+                        <button class="db-tab-btn" data-table="locations">Stations</button>
+                        <button class="db-tab-btn" data-table="readings">Sensor Readings</button>
+                        <button class="db-tab-btn" data-table="predictions">Predictions DB</button>
+                    </div>
+
+                    <!-- DB Display Card -->
+                    <div class="glass-card no-padding">
+                        <div class="table-container">
+                            <table id="table-database-view">
+                                <thead>
+                                    <!-- Dynamic Headers -->
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast hidden">
+        <i id="toast-icon" class="fa-solid"></i>
+        <span id="toast-message">Notification message here</span>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

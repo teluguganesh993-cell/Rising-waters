@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rising Waters | Flood Alert early-warning System</title>
+    <meta name="description" content="Rising Waters - AI-powered River Water Level Monitoring & Flood Alert System using XGBoost ML">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #070b13;
+            --bg-card: rgba(13, 20, 35, 0.65);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --color-primary: #3b82f6; /* Blue */
+            --color-primary-glow: rgba(59, 130, 246, 0.25);
+            --color-secondary: #06b6d4; /* Cyan */
+            --color-secondary-glow: rgba(6, 182, 212, 0.25);
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-sans); }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Ambient Glow Effects */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glow-orb.blue {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, var(--color-primary-glow) 0%, transparent 70%);
+            top: -100px; left: -100px;
+        }
+        .glow-orb.cyan {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, var(--color-secondary-glow) 0%, transparent 70%);
+            bottom: -80px; right: -80px;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: rgba(8, 12, 22, 0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 1rem 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+        .navbar .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+        .navbar .brand-icon {
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .navbar .brand-text {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.35rem;
+            color: var(--text-primary);
+        }
+        .navbar .brand-text span {
+            background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: var(--transition-smooth);
+        }
+        .nav-links a:hover { color: var(--text-primary); }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 850px;
+            padding: 7rem 2rem 2rem 2rem;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            border-radius: 50px;
+            padding: 0.45rem 1.25rem;
+            font-size: 0.8rem;
+            color: var(--color-primary);
+            font-weight: 600;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .hero h1 {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 3.2rem;
+            line-height: 1.15;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1px;
+        }
+        .hero h1 .gradient-text {
+            background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.15rem;
+            line-height: 1.7;
+            max-width: 650px;
+            margin: 0 auto 2.5rem auto;
+        }
+
+        /* CTA Buttons */
+        .cta-group { display: flex; gap: 1.25rem; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            padding: 0.9rem 2.25rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-primary), #2563eb);
+            color: var(--text-primary);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.45);
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(59, 130, 246, 0.65);
+        }
+        .btn-outline {
+            background: transparent;
+            border-color: var(--border-glass);
+            color: var(--text-primary);
+        }
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Feature Cards Row */
+        .features-row {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.75rem;
+            max-width: 950px;
+            margin-top: 4rem;
+            padding: 0 2rem 4rem 2rem;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .features-row { grid-template-columns: 1fr; }
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            transition: var(--transition-smooth);
+            text-align: left;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        .feature-icon {
+            width: 48px; height: 48px;
+            border-radius: var(--radius-md);
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--color-secondary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .feature-card h3 {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.15rem;
+            margin-bottom: 0.5rem;
+        }
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
+        .footer {
+            margin-top: auto;
+            width: 100%;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--border-glass);
+            background: rgba(5, 7, 12, 0.9);
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="glow-orb blue"></div>
+    <div class="glow-orb cyan"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="/" class="brand">
+            <i class="fa-solid fa-water brand-icon"></i>
+            <span class="brand-text">Rising<span>Waters</span></span>
+        </a>
+        <div class="nav-links">
+            <a href="/predict">Evaluate Risk</a>
+        </div>
+    </nav>
+
+    <!-- Hero Content -->
+    <div class="hero">
+        <div class="hero-badge">
+            <i class="fa-solid fa-bolt"></i> AI Flood Early Warning System
+        </div>
+        <h1>AI-Powered <span class="gradient-text">Water Level Monitoring & Flood Alerting</span></h1>
+        <p>
+            An advanced Machine Learning solution designed to predict river flood risks. By processing real-time telemetry datasets—water level deviations, rainfall volume, humidity, and flow velocity—our system provides early warnings to protect lives and property.
+        </p>
+        
+        <div class="cta-group">
+            <a href="/predict" class="btn btn-primary"><i class="fa-solid fa-triangle-exclamation"></i> Evaluate Flood Risk Form</a>
+            <a href="http://127.0.0.1:8000/" class="btn btn-outline" target="_blank"><i class="fa-solid fa-chart-pie"></i> Open System Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="features-row">
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fa-solid fa-network-wired"></i></div>
+            <h3>IoT Sensor Streams</h3>
+            <p>Monitors critical telemetry measurements from ultrasonic level nodes and rain gauges at regional river basins.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fa-solid fa-brain"></i></div>
+            <h3>XGBoost Predictor</h3>
+            <p>Applies gradient boosted classification to determine the probability of flooding before it manifests.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fa-solid fa-bullhorn"></i></div>
+            <h3>Automated Advisories</h3>
+            <p>Instantly classifies risk levels and dispatches specific response protocols (safe, watch, or evacuation warning).</p>
+        </div>
+    </section>
+
+    <footer class="footer">
+        &copy; 2026 Rising Waters &mdash; Flood Alert & Warning System. All rights reserved.
+    </footer>
+</body>
+</html>
