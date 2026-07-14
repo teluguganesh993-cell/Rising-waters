@@ -136,7 +136,3 @@ python app.py
 
 ## Developed By
 - Telugu Ganesh
-- Adimulapu Anil Kumar  
-- Asia Kakravada  
-- Akhil Kontham  
-- P Vaahid
